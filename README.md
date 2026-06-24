@@ -1,8 +1,7 @@
-<p align="center">
+<div align="center">
   <img src="cupcake.svg" width="120" height="120" alt="VelvetFlow Logo" />
-</p>
-
-<h1 align="center">VelvetFlow</h1>
+  <h1 style="margin-top: 0px; margin-bottom: 10px;">VelvetFlow</h1>
+</div>
 
 <p align="center">
   <b>A high-concurrency ticket flash-sale simulator.</b><br />
