@@ -12,7 +12,7 @@ export default function Home() {
               alt="VelvetFlow Logo"
               width={40}
               height={40}
-              className="rounded-lg shadow-sm border border-[#e8d5d5] dark:border-[#2f2222]"
+            // className="rounded-lg shadow-sm border border-[#e8d5d5] dark:border-[#2f2222]"
             />
             <div>
               <h1 className="text-xl font-extrabold tracking-tight">
@@ -23,7 +23,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4 text-sm font-medium">
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 text-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -64,10 +64,10 @@ export default function Home() {
                 <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Simulation Controls</h3>
                 <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-1 rounded">ControlPanel</span>
               </div>
-              
+
               {/* TODO: Insert ControlPanel Component here once created */}
               {/* <ControlPanel /> */}
-              
+
               <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/20 text-center">
                 <span className="text-3xl mb-2">🎛️</span>
                 <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Control Panel Placeholder</p>
@@ -85,10 +85,10 @@ export default function Home() {
                 <h3 className="font-bold text-zinc-900 dark:text-zinc-100">RPS & Latency Metrics</h3>
                 <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-1 rounded">RPSChart</span>
               </div>
-              
+
               {/* TODO: Insert RPSChart Component here once created */}
               {/* <RPSChart /> */}
-              
+
               <div className="flex flex-col items-center justify-center py-20 px-4 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/20 text-center">
                 <span className="text-3xl mb-2">📊</span>
                 <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Real-Time Performance Chart</p>
