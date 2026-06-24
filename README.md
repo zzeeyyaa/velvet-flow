@@ -1,6 +1,6 @@
 <div align="center">
   <img src="cupcake.svg" width="120" height="120" alt="VelvetFlow Logo" />
-  <h1 style="margin-top: 0px; margin-bottom: 10px;">VelvetFlow</h1>
+  <h2 style="margin-buttom:12px;">VelvetFlow</h2>
 </div>
 
 <p align="center">
