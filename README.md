@@ -1,6 +1,13 @@
-# <img src="cupcake.svg" align="center" width="48" height="48" /> VelvetFlow
+<p align="center">
+  <img src="cupcake.svg" width="120" height="120" alt="VelvetFlow Logo" />
+</p>
 
-**VelvetFlow** is a high-concurrency ticket flash-sale simulator designed to demonstrate and test race condition prevention under extreme server load. Using a vintage red-velvet cupcake theme, it couples high-performance modern web technologies with distributed database locking patterns to guarantee transaction integrity.
+<h1 align="center">VelvetFlow</h1>
+
+<p align="center">
+  <b>A high-concurrency ticket flash-sale simulator.</b><br />
+  Built with <b>Next.js 16</b>, <b>Hono (Bun/TypeScript)</b>, <b>Redis (SETNX)</b> distributed locking, PostgreSQL, and Docker to prevent race conditions under heavy load.
+</p>
 
 ---
 
