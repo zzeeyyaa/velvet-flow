@@ -6,7 +6,16 @@
 
 <p align="center">
   <b>A high-concurrency ticket flash-sale simulator.</b><br />
-  Built with <b>Next.js 16</b>, <b>Hono (Bun/TypeScript)</b>, <b>Redis (SETNX)</b> distributed locking, PostgreSQL, and Docker to prevent race conditions under heavy load.
+  Designed to prevent race conditions and handle heavy concurrent loads gracefully.
+</p>
+
+<p align="center">
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16" /></a>
+  <a href="https://hono.dev"><img src="https://img.shields.io/badge/Hono-E36B2B?style=for-the-badge&logo=hono&logoColor=white" alt="Hono" /></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white" alt="Bun" /></a>
+  <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis_SETNX-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" /></a>
+  <a href="https://postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
+  <a href="https://docker.com"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
 </p>
 
 ---
