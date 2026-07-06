@@ -7,7 +7,7 @@ export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379'
     retryStrategy(times) {
         // Jika tidak ada REDIS_URL atau sudah mencoba lebih dari 3 kali, stop retry
         if (!process.env.REDIS_URL || times > 3) {
-            return null 
+            return null
         }
         return Math.min(times * 50, 2000)
     }
@@ -27,10 +27,11 @@ export let luaBookingScriptSha: string = ''
 // Kode Lua Script (Atomic Check-and-Decrement)
 const LUA_BOOKING_SCRIPT = `
   local stock = redis.call('GET', KEYS[1])
-  if tonumber(stock) <= 0 then
+  
+  if not stock or tonumber(stock) < tonumber(ARGV[1]) then
     return -1
   end
-  return redis.call('DECR', KEYS[1])
+  return redis.call('DECRBY', KEYS[1], tonumber(ARGV[1]))
 `
 
 // 2. Fungsi Inisiasi saat Booting (Dibuat opsional)
@@ -51,4 +52,4 @@ export const initRedisCache = async () => {
     } catch (error: any) {
         console.warn('⚠️ Redis Connection failed, proceeding without cache:', error.message || error)
     }
-}
+}
