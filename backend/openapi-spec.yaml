@@ -125,7 +125,7 @@ paths:
   # ==========================================
   # FLOW 2: THE CONCURRENCY CORE (TICKET WAR)
   # ==========================================
-  /api/tickets/book:
+  /api/v1/tickets/book:
     post:
       summary: "The Concurrency Core — War Ticket Endpoint (Create Order)"
       description: >

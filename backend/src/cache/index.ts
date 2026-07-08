@@ -25,13 +25,23 @@ redis.on('error', (err) => {
 export let luaBookingScriptSha: string = ''
 
 // Kode Lua Script (Atomic Check-and-Decrement)
+// Menggunakan struktur data Hash di Redis (berisi field 'stock' dan 'is_active')
 const LUA_BOOKING_SCRIPT = `
-  local stock = redis.call('GET', KEYS[1])
+  -- Ambil data 'stock' dan 'is_active' sekaligus menggunakan HMGET
+  local ticket = redis.call('HMGET', KEYS[1], 'stock', 'is_active')
+  local stock = ticket[1]
+  local is_active = ticket[2]
   
-  if not stock or tonumber(stock) < tonumber(ARGV[1]) then
-    return -1
+  -- Tolak transaksi jika: 
+  -- 1. Tiket tidak ada di Redis
+  -- 2. Stok tidak mencukupi
+  -- 3. Tiket dinonaktifkan (is_active == '0' atau 'false')
+  if not stock or tonumber(stock) < tonumber(ARGV[1]) or is_active == '0' or is_active == 'false' then
+    return -1   
   end
-  return redis.call('DECRBY', KEYS[1], tonumber(ARGV[1]))
+  
+  -- Kurangi stok secara atomic menggunakan HINCRBY (butuh nilai negatif untuk mengurangi)
+  return redis.call('HINCRBY', KEYS[1], 'stock', -tonumber(ARGV[1]))
 `
 
 // 2. Fungsi Inisiasi saat Booting (Dibuat opsional)

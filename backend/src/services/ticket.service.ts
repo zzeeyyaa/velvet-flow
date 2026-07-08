@@ -2,6 +2,37 @@ import { luaBookingScriptSha, redis } from "../cache";
 import { sql } from "../db";
 import { AppError } from "../utils/app_errors";
 
+export const createTicket = async (
+    name: string,
+    event_id: string,
+    category_id: string,
+    total_capacity: number,
+    price: number
+) => {
+    const is_active = true;
+    const [newTicket] = await sql`INSERT INTO tickets (
+        name,
+        event_id,
+        category_id,
+        total_capacity,
+        price,
+        stock,
+        is_active
+    ) VALUES (${name}, ${event_id}, ${category_id}, ${total_capacity}, ${price}, ${total_capacity}, ${is_active}) RETURNING *`;
+    if (!newTicket) {
+        throw new AppError(500, "Failed to create ticket.");
+    }
+    return newTicket;
+}
+
+export const getListTicket = async () => {
+    const [tickets] = await sql`SELECT * FROM tickets`;
+    if (!tickets) {
+        throw new AppError(500, "Failed to fetch tickets.");
+    }
+    return tickets;
+}
+
 export const buyTicketVulnerable = async (ticketId: string, quantity: number, simulatedUserId: string) => {
     // Validasi Input (Minimal harus ada Quantity)
     if (!quantity || quantity <= 0) {
@@ -16,8 +47,8 @@ export const buyTicketVulnerable = async (ticketId: string, quantity: number, si
     }
 
     var stock = ticket?.stock ?? 0;
-
-    if (stock < quantity) {
+    var is_active = ticket.is_active;
+    if (stock < quantity || !is_active) {
         throw new AppError(400, "Stok habis", "STOCK_EXHAUSTED");
     }
     stock -= quantity
@@ -63,9 +94,9 @@ export const buyTicketSemiResilient = async (ticketId: string, quantity: number,
             }
 
             const currentStock = ticket.stock;
-
+            var is_active = ticket.is_active;
             // 2. Validasi Stock
-            if (currentStock < quantity) {
+            if (currentStock < quantity || !is_active) {
                 throw new AppError(400, "Stok habis", "STOCK_EXHAUSTED");
             }
 
@@ -100,38 +131,50 @@ export const buyTicketResilient = async (ticketId: string, quantity: number, sim
         throw new AppError(400, "Jumlah Tiket Tidak Valid", "INVALID_QUANTITY");
     }
 
+    // 1. Eksekusi Lua Script di Redis (Atomic check-and-decrement)
+    const result = await redis.evalsha(luaBookingScriptSha, 1, ticketId, quantity);
+
+    // Cek Hasil dari Redis
+    // Jika -1 artinya stok habis ATAU tiket dinonaktifkan (karena Lua script kita mengecek is_active)
+    if (result === -1) {
+        throw new AppError(400, "Tiket tidak tersedia atau stok habis", "TICKET_UNAVAILABLE");
+    }
+
     try {
-        // 1. Eksekusi Lua Script di Redis (langsung potong stock secara atomic di memori RAM)
-        const result = await redis.evalsha(luaBookingScriptSha, 1, ticketId, quantity)
+        // 2. Simpan ke Postgres dalam SATU Transaksi (Gagal satu, batal semua)
+        await sql.begin(async (tx) => {
+            // Catat Order
+            await tx`INSERT INTO orders
+            ${tx({ ticket_id: ticketId, simulated_user_id: simulatedUserId, quantity })}`;
 
-        // Cek Hasil dari Redis
-        // Jika -1 artinya stok tidak cukup
-        if (result === -1) {
-            throw new AppError(400, "Stok habis", "STOCK_EXHAUSTED");
-        }
-
-        // 2. Simpan order ke Postgres (database permanen)
-        // Kita tidak memakai redis.hset karena riwayat pembelian resmi harus dicatat di PostgreSQL
-        await sql`INSERT INTO orders
-        ${sql({ ticket_id: ticketId, simulated_user_id: simulatedUserId, quantity })}`;
-
-        // 3. Sinkronisasikan sisa stok ke Postgres (opsional tapi disarankan di blueprint)
-        // Agar data stok di PostgreSQL tetap sama dengan stok di Redis
-        await sql`UPDATE tickets
-        SET stock = stock - ${quantity}
-        WHERE id = ${ticketId}`;
+            // Sinkronisasi Sisa Stok
+            await tx`UPDATE tickets
+            SET stock = stock - ${quantity}
+            WHERE id = ${ticketId}`;
+        });
 
         return {
             message: "Tiket berhasil didapat",
         };
     } catch (error) {
-        // Jika errornya adalah AppError buatan kita sendiri (misal STOCK_EXHAUSTED)
-        // Langsung lempar kembali agar tidak tertutup menjadi error 500
+        // 🚨 COMPENSATING TRANSACTION (ROLLBACK REDIS) 🚨
+        // Jika insert/update PostgreSQL gagal (timeout/db down), kita WAJIB mengembalikan stok di Redis.
+        // HINCRBY dengan nilai positif digunakan untuk membatalkan pengurangan sebelumnya.
+        console.log('Error SQL Insert (Initiating Redis Rollback):', error);
+
+        try {
+            await redis.hincrby(ticketId, 'stock', quantity);
+            console.log(`Rollback Redis berhasil untuk tiket ${ticketId}`);
+        } catch (redisError) {
+            // Critical Error: Postgres mati dan Redis juga gagal di-rollback!
+            console.error('CRITICAL: Gagal rollback Redis (Ghost Stock terjadi)!', redisError);
+        }
+
+        // Jika errornya adalah AppError buatan kita sendiri (meski di blok ini jarang terjadi)
         if (error instanceof AppError) {
             throw error;
         }
 
-        console.log('Error Redis or SQL Insert:', error);
         throw new AppError(500, 'Internal Server Error');
     }
 };
