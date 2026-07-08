@@ -9,6 +9,8 @@ import { getOpenApiSpec } from './docs/swagger';
 import { swaggerUI } from '@hono/swagger-ui';
 import { AppError } from './utils/app_errors';
 
+import ticketRouter from './routes/ticket.routes';
+
 // 1. System bootsrapping
 console.log('Bootstrapping System...');
 await checkDbConnection()
@@ -36,6 +38,8 @@ app.get('/ui', swaggerUI({
 app.get('/', (c) => {
   return c.text('Velvet Flow API is Running')
 })
+
+app.route('/api/v1/tickets', ticketRouter)
 
 // 4. Jaringan Pengaman Global
 app.onError((err, c) => {
