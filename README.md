@@ -179,7 +179,3 @@ You can find stress testing scripts using **k6** inside the repository.
 * **Duration:** 10s burst.
 * **Expectation:** If 100 tickets are available, exactly 100 orders are registered in PostgreSQL. Redis prevents the other 400 requests from creating duplicate or phantom bookings.
 
----
-
-## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
