@@ -7,6 +7,9 @@ export interface Order {
     status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
     payment_method: string;
     payment_status: 'UNPAID' | 'PAID' | 'REFUNDED' | 'FAILED';
+    idempotency_key?: string;
+    lock_strategy?: string;
+    attempt_number?: number;
     created_at: Date;
     updated_at: Date;
 }
