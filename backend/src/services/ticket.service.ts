@@ -26,11 +26,19 @@ export const createTicket = async (
 }
 
 export const getListTicket = async () => {
-    const [tickets] = await sql`SELECT * FROM tickets`;
-    if (!tickets) {
-        throw new AppError(500, "Failed to fetch tickets.");
+    const tickets = await sql`SELECT * FROM tickets`;
+    if (!tickets || tickets.length === 0) {
+        throw new AppError(404, "No tickets found.");
     }
     return tickets;
+}
+
+export const getDetailTicket = async (id: string) => {
+    const [ticket] = await sql`SELECT * FROM tickets WHERE id = ${id}`;
+    if (!ticket) {
+        throw new AppError(404, "Ticket not found.", "TICKET_NOT_FOUND");
+    }
+    return ticket;
 }
 
 export const buyTicketVulnerable = async (ticketId: string, quantity: number, simulatedUserId: string) => {
@@ -125,10 +133,22 @@ export const buyTicketSemiResilient = async (ticketId: string, quantity: number,
     }
 };
 
-export const buyTicketResilient = async (ticketId: string, quantity: number, simulatedUserId: string) => {
+export const buyTicketResilient = async (ticketId: string, quantity: number, simulatedUserId: string, idempotencyKey?: string) => {
     // Validasi quantity (tidak boleh kurang dari atau sama dengan 0)
     if (!quantity || quantity <= 0) {
         throw new AppError(400, "Jumlah Tiket Tidak Valid", "INVALID_QUANTITY");
+    }
+
+    // 0. Idempotency Check via Redis SETNX (Mencegah Double-Booking)
+    if (idempotencyKey) {
+        const lockKey = `idemp:${simulatedUserId}:${idempotencyKey}`;
+        // Set key hanya jika belum ada (NX), dengan waktu kedaluwarsa 2000 ms (PX 2000)
+        const lockResult = await redis.set(lockKey, 'locked', 'PX', 2000, 'NX');
+
+        if (!lockResult) {
+            // Nilai null berarti key sudah ada -> Request duplikat/dobel klik terdeteksi
+            throw new AppError(409, "Permintaan sedang diproses. Jangan klik 2 kali.", "DOUBLE_BOOKING_PREVENTED");
+        }
     }
 
     // 1. Eksekusi Lua Script di Redis (Atomic check-and-decrement)
@@ -143,9 +163,15 @@ export const buyTicketResilient = async (ticketId: string, quantity: number, sim
     try {
         // 2. Simpan ke Postgres dalam SATU Transaksi (Gagal satu, batal semua)
         await sql.begin(async (tx) => {
-            // Catat Order
+            // Catat Order (Termasuk idempotency_key sebagai rekam jejak)
             await tx`INSERT INTO orders
-            ${tx({ ticket_id: ticketId, simulated_user_id: simulatedUserId, quantity })}`;
+            ${tx({
+                ticket_id: ticketId,
+                simulated_user_id: simulatedUserId,
+                quantity,
+                idempotency_key: idempotencyKey || null,
+                lock_strategy: 'resilient'
+            })}`;
 
             // Sinkronisasi Sisa Stok
             await tx`UPDATE tickets
