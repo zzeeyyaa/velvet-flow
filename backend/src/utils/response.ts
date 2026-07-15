@@ -6,12 +6,16 @@ import { Context } from "hono";
  * @param data Data payload yang akan dikirim ke klien
  * @param statusCode HTTP Status Code (default: 200)
  */
-export const sendSuccess = (c: Context, data: any, statusCode: number = 200) => {
+export const sendSuccess = (c: Context, data: any, message?: string, statusCode: number = 200) => {
+    const res: any = {
+        success: true,
+        data,
+    };
+    if (message) {
+        res.message = message;
+    }
     return c.json(
-        {
-            success: true,
-            data,
-        },
+        res,
         statusCode as any
     );
 };
