@@ -1,7 +1,9 @@
 import { AppError } from "../utils/app_errors";
+import { getOffset, buildPagination } from "../utils/pagination";
 import {
     insertEvent,
     findAllEvents,
+    countEvents,
     findEventById,
     updateEventById,
     softDeleteEventById,
@@ -26,14 +28,21 @@ export const createEvent = async (
     return newEvent;
 };
 
-export const getListEvent = async () => {
-    const events = await findAllEvents();
+export const getListEvent = async (page = 1, limit = 10) => {
+    const offset = getOffset(page, limit);
+    const [events, total] = await Promise.all([
+        findAllEvents(limit, offset),
+        countEvents(),
+    ]);
 
     if (!events) {
         throw new AppError(500, "Failed to fetch events.");
     }
 
-    return events;
+    return {
+        data: events,
+        pagination: buildPagination(total, page, limit),
+    };
 };
 
 export const getDetailEvent = async (id: string) => {

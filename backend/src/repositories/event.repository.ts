@@ -13,9 +13,14 @@ export const insertEvent = async (
     return newEvent;
 };
 
-export const findAllEvents = async () => {
-    const events = await sql`SELECT * FROM events`;
+export const findAllEvents = async (limit: number, offset: number) => {
+    const events = await sql`SELECT * FROM events LIMIT ${limit} OFFSET ${offset}`;
     return events;
+};
+
+export const countEvents = async () => {
+    const [result] = await sql`SELECT COUNT(*)::int AS total FROM events`;
+    return result.total;
 };
 
 export const findEventById = async (id: string) => {

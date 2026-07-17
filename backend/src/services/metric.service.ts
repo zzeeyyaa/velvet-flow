@@ -1,8 +1,11 @@
-import { redis } from "../cache";
-import { sql } from "../db"
-
-const STRATEGIES = ['vulnerable', 'semi_resilient', 'resilient'] as const;
-type Strategy = typeof STRATEGIES[number];
+import {
+    STRATEGIES,
+    findAllTicketsWithStock,
+    getRedisStock,
+    getOrderAggregateByStrategy,
+    countAllOrders,
+} from "../repositories/metric.repository";
+import type { Strategy } from "../repositories/metric.repository";
 
 export interface StrategyMetric {
     strategy: Strategy;
@@ -12,68 +15,47 @@ export interface StrategyMetric {
     failedOrders: number;
 }
 
+export interface TicketMetric {
+    ticketId: string;
+    stockInDb: number;
+    stockInRedis: number | null;
+    isActive: boolean;
+    totalCapacity: number;
+}
+
 export interface LiveMetric {
     perStrategy: StrategyMetric[];
-    tickets: {
-        ticketId: string;
-        stockInDb: number;
-        stockInRedis: number | null;
-        isActive: boolean;
-        totalCapacity: number;
-    }[];
+    tickets: TicketMetric[];
     totalOrders: number;
 }
 
 export const getMetricLive = async (): Promise<LiveMetric> => {
-    // 1. Ambil semua tiket dari DB
-    const tickets = await sql`
-        SELECT id, stock, total_capacity, is_active
-        FROM tickets
-    `;
+    const tickets = await findAllTicketsWithStock();
 
-    // 2. Untuk setiap tiket, ambil stok dari Redis (disimpan sebagai Hash dengan field 'stock')
-    const ticketMetrics = await Promise.all(
-        tickets.map(async (ticket) => {
-            const redisStock = await redis.hget(ticket.id, 'stock');
+    const ticketMetrics: TicketMetric[] = await Promise.all(
+        tickets.map(async (ticket) => ({
+            ticketId: ticket.id as string,
+            stockInDb: ticket.stock as number,
+            stockInRedis: await getRedisStock(ticket.id as string),
+            isActive: ticket.is_active as boolean,
+            totalCapacity: ticket.total_capacity as number,
+        }))
+    );
+
+    const perStrategy: StrategyMetric[] = await Promise.all(
+        STRATEGIES.map(async (strategy) => {
+            const result = await getOrderAggregateByStrategy(strategy);
             return {
-                ticketId: ticket.id as string,
-                stockInDb: ticket.stock as number,
-                stockInRedis: redisStock !== null ? parseInt(redisStock) : null,
-                isActive: ticket.is_active as boolean,
-                totalCapacity: ticket.total_capacity as number,
+                strategy,
+                totalOrders: result.total_orders,
+                totalTicketsSold: result.total_tickets_sold,
+                successOrders: result.success_orders,
+                failedOrders: result.failed_orders,
             };
         })
     );
 
-    // 3. Ambil metrik per strategi dari tabel orders
-    const perStrategy = await Promise.all(
-        STRATEGIES.map(async (strategy) => {
-            const [result] = await sql`
-                SELECT
-                    COUNT(*)                                                          AS total_orders,
-                    COALESCE(SUM(quantity), 0)                                        AS total_tickets_sold,
-                    COUNT(*) FILTER (WHERE status = 'SUCCESS')                        AS success_orders,
-                    COUNT(*) FILTER (WHERE status = 'FAILED')                         AS failed_orders
-                FROM orders
-                WHERE lock_strategy = ${strategy}
-            `;
+    const totalOrders = await countAllOrders();
 
-            return {
-                strategy,
-                totalOrders:      parseInt(result.total_orders),
-                totalTicketsSold: parseInt(result.total_tickets_sold),
-                successOrders:    parseInt(result.success_orders),
-                failedOrders:     parseInt(result.failed_orders),
-            } satisfies StrategyMetric;
-        })
-    );
-
-    // 4. Total semua order
-    const [totalResult] = await sql`SELECT COUNT(*) AS total FROM orders`;
-
-    return {
-        perStrategy,
-        tickets: ticketMetrics,
-        totalOrders: parseInt(totalResult.total),
-    };
-};
+    return { perStrategy, tickets: ticketMetrics, totalOrders };
+}

@@ -10,6 +10,11 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { AppError } from './utils/app_errors';
 
 import ticketRouter from './routes/ticket.routes';
+import eventRouter from './routes/event.routes';
+import categoryRouter from './routes/category.routes';
+import orderRouter from './routes/order.routes';
+import metricRouter from './routes/metric.routes';
+import simulationRouter from './routes/simulation.routes';
 
 // 1. System bootsrapping
 console.log('Bootstrapping System...');
@@ -40,6 +45,11 @@ app.get('/', (c) => {
 })
 
 app.route('/api/v1/tickets', ticketRouter)
+app.route('/api/v1/events', eventRouter)
+app.route('/api/v1/category', categoryRouter)
+app.route('/api/v1/orders', orderRouter)
+app.route('/api/v1/metrics', metricRouter)
+app.route('/api/v1/simulation', simulationRouter)
 
 // 4. Jaringan Pengaman Global
 app.onError((err, c) => {
