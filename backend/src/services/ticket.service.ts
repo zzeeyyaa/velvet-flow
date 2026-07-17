@@ -1,9 +1,11 @@
 import { luaBookingScriptSha, redis } from "../cache";
 import { sql } from "../db";
 import { AppError } from "../utils/app_errors";
+import { getOffset, buildPagination } from "../utils/pagination";
 import {
     insertTicket,
     findAllTickets,
+    countTickets,
     findTicketById,
     findTicketStockById,
     findTicketByIdForUpdate,
@@ -29,14 +31,21 @@ export const createTicket = async (
     return newTicket;
 };
 
-export const getListTicket = async () => {
-    const tickets = await findAllTickets();
+export const getListTicket = async (page = 1, limit = 10) => {
+    const offset = getOffset(page, limit);
+    const [tickets, total] = await Promise.all([
+        findAllTickets(limit, offset),
+        countTickets(),
+    ]);
 
     if (!tickets || tickets.length === 0) {
         throw new AppError(404, "No tickets found.");
     }
 
-    return tickets;
+    return {
+        data: tickets,
+        pagination: buildPagination(total, page, limit),
+    };
 };
 
 export const getDetailTicket = async (id: string) => {
@@ -73,7 +82,12 @@ export const buyTicketVulnerable = async (ticketId: string, quantity: number, si
     // Simpan ke db (tanpa transaksi — vulnerable by design)
     try {
         await sql.begin(async (tx) => {
-            await insertOrder(tx, { ticket_id: ticketId, simulated_user_id: simulatedUserId, quantity });
+            await insertOrder(tx, { 
+                ticket_id: ticketId, 
+                simulated_user_id: simulatedUserId, 
+                quantity,
+                lock_strategy: 'vulnerable'
+            });
             await updateTicketStock(tx, ticketId, newStock);
         });
     } catch (error) {
@@ -110,7 +124,12 @@ export const buyTicketSemiResilient = async (ticketId: string, quantity: number,
             const newStock = currentStock - quantity;
 
             // 3. Simpan Order
-            await insertOrder(tx, { ticket_id: ticketId, simulated_user_id: simulatedUserId, quantity });
+            await insertOrder(tx, { 
+                ticket_id: ticketId, 
+                simulated_user_id: simulatedUserId, 
+                quantity,
+                lock_strategy: 'semi_resilient'
+            });
 
             // 4. Update stok
             await updateTicketStock(tx, ticketId, newStock);

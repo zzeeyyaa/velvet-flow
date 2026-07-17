@@ -1,35 +1,39 @@
-import { sql } from "../db";
+import { insertCategory, findAllCategory, countCategories, softDeleteCategoryById } from "../repositories/category.repository";
 import { AppError } from "../utils/app_errors";
+import { getOffset, buildPagination } from "../utils/pagination";
 
 export const createCategory = async (
     name: string,
     description: string
-
 ) => {
-    const [newCategory] = await sql`INSERT INTO categories (name, description) VALUES (${name}, ${description}) RETURNING *`;
+    const newCategory = await insertCategory(name, description);
     if (!newCategory) {
         throw new AppError(500, "Failed to create category.");
     }
     return newCategory;
 }
 
-export const getListCategory = async () => {
-    const listCategory = await sql`SELECT * FROM categories`;
+export const getListCategory = async (page = 1, limit = 10) => {
+    const offset = getOffset(page, limit);
+    const [listCategory, total] = await Promise.all([
+        findAllCategory(limit, offset),
+        countCategories(),
+    ]);
+
     if (!listCategory || listCategory.length <= 0) {
         throw new AppError(404, "List category not found.");
     }
-    return listCategory;
+
+    return {
+        data: listCategory,
+        pagination: buildPagination(total, page, limit),
+    };
 }
 
 export const deleteCategory = async (id: string) => {
-    try {
-        const [deleteCategory] = await sql`UPDATE categories SET status = 'DELETED' WHERE id = ${id} RETURNING *`;
-        if (!deleteCategory) {
-            throw new AppError(404, "Category not found.");
-        }
-        return deleteCategory;
-    } catch (error) {
-        console.log(error)
-        throw new AppError(500, "Failed to delete category")
+    const deleted = await softDeleteCategoryById(id);
+    if (!deleted) {
+        throw new AppError(404, "Category not found.");
     }
+    return deleted;
 }

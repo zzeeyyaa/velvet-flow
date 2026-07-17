@@ -11,9 +11,12 @@ import { AppError } from "../utils/app_errors";
 import { sendError, sendSuccess } from "../utils/response";
 
 export const listTickets = async (c: Context) => {
+    const page = Number(c.req.query("page")) || 1;
+    const limit = Number(c.req.query("limit")) || 10;
+
     try {
-        const tickets = await getListTicket();
-        return sendSuccess(c, tickets, "Ticket list fetched successfully", 200);
+        const result = await getListTicket(page, limit);
+        return sendSuccess(c, result, "Ticket list fetched successfully", 200);
     } catch (error: any) {
         console.error(error);
         if (error instanceof AppError) {

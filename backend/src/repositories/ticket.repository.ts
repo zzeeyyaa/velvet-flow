@@ -21,9 +21,14 @@ export const insertTicket = async (
     return newTicket;
 };
 
-export const findAllTickets = async () => {
-    const tickets = await sql`SELECT * FROM tickets`;
+export const findAllTickets = async (limit: number, offset: number) => {
+    const tickets = await sql`SELECT * FROM tickets LIMIT ${limit} OFFSET ${offset}`;
     return tickets;
+};
+
+export const countTickets = async () => {
+    const [result] = await sql`SELECT COUNT(*)::int AS total FROM tickets`;
+    return result.total;
 };
 
 export const findTicketById = async (id: string) => {
