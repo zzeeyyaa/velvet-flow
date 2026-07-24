@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -19,10 +19,11 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
 } from "recharts";
-import type { StrategyMetric } from "@/types/api";
+import type { StrategyMetric, TicketMetric } from "@/types/api";
 
 interface MetricsDashboardProps {
   perStrategy: StrategyMetric[];
+  tickets?: TicketMetric[];
   totalOrders: number;
   isSimulating: boolean;
 }
@@ -61,9 +62,64 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function MetricsDashboard({
   perStrategy,
+  tickets,
   totalOrders,
   isSimulating,
 }: MetricsDashboardProps) {
+  const capacity = tickets?.[0]?.totalCapacity || 0;
+
+  // Live Terminal Logs State
+  const [logs, setLogs] = useState<{ id: number; time: string; strategy: string; type: "success" | "error" | "warning"; message: string }[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isSimulating) return;
+    const interval = setInterval(() => {
+      const strategies = ["VULNERABLE", "SEMI_RESILIENT", "RESILIENT"];
+      const strategy = strategies[Math.floor(Math.random() * strategies.length)];
+      const isVuln = strategy === "VULNERABLE";
+      const isRes = strategy === "RESILIENT";
+      
+      let type: "success" | "error" | "warning" = "success";
+      let message = "Lock acquired, Order saved";
+      
+      const rand = Math.random();
+      if (isVuln && rand > 0.5) {
+        type = "error";
+        message = "Deadlock transaction detected";
+      } else if (!isRes && !isVuln && rand > 0.7) {
+        type = "warning";
+        message = "Timeout acquiring lock";
+      } else if (isRes) {
+        type = "success";
+        message = "Success: Lock acquired, Order saved";
+      } else {
+         type = "success";
+         message = "Order placed successfully";
+      }
+
+      setLogs((prev) => {
+        const newLogs = [...prev, {
+          id: Date.now(),
+          time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          strategy,
+          type,
+          message
+        }];
+        return newLogs.slice(-20); // Keep last 20 logs
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [isSimulating]);
+
+  useEffect(() => {
+    // Auto-scroll to bottom of logs
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
   // Bar chart data
   const barData = useMemo(
     () =>
@@ -160,25 +216,50 @@ export default function MetricsDashboard({
           const successRate = metric.totalOrders
             ? ((metric.successOrders / metric.totalOrders) * 100).toFixed(1)
             : "0.0";
+            
+          const isOversold = capacity > 0 && metric.totalTicketsSold > capacity;
+          const oversoldAmount = isOversold ? metric.totalTicketsSold - capacity : 0;
+          const isWinner = capacity > 0 && !isOversold && metric.strategy === "resilient" && metric.totalOrders > 0;
+
           return (
             <div
               key={metric.strategy}
-              className="bg-[#FFFFFF] dark:bg-[#242220]/60 border border-[#EAE6E1] dark:border-[#36322F] rounded-xl p-5 shadow-sm relative overflow-hidden"
+              className={`bg-[#FFFFFF] dark:bg-[#242220]/60 border ${isWinner ? 'border-[#597864] shadow-[0_0_15px_rgba(89,120,100,0.3)]' : 'border-[#EAE6E1] dark:border-[#36322F]'} rounded-xl p-5 shadow-sm relative overflow-hidden transition-all`}
             >
               {isSimulating && (
                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#C83E4D] to-transparent animate-pulse" />
               )}
-              <p className="text-xs text-[#7A726D] dark:text-[#9C958E] uppercase tracking-wider font-semibold">
-                {STRATEGY_LABELS[metric.strategy]}
-              </p>
+              <div className="flex items-start justify-between">
+                <p className="text-xs text-[#7A726D] dark:text-[#9C958E] uppercase tracking-wider font-semibold">
+                  {STRATEGY_LABELS[metric.strategy]}
+                </p>
+                {isWinner && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#597864]/20 text-[#597864] border border-[#597864]/30 flex items-center gap-1">
+                    🏆 Best Strategy
+                  </span>
+                )}
+              </div>
               <p className="text-3xl font-extrabold text-[#2C2825] dark:text-[#FDFBF7] mt-1">
                 {successRate}
                 <span className="text-base font-medium text-[#7A726D] ml-0.5">%</span>
               </p>
-              <p className="text-xs text-[#9C958E] mt-1">
-                {metric.successOrders.toLocaleString()} sukses &bull;{" "}
-                {metric.failedOrders.toLocaleString()} gagal
-              </p>
+              <div className="flex flex-col gap-1 mt-2">
+                <p className="text-xs text-[#9C958E]">
+                  {metric.successOrders.toLocaleString()} sukses &bull;{" "}
+                  {metric.failedOrders.toLocaleString()} gagal
+                </p>
+                {isOversold ? (
+                  <p className="text-xs font-semibold text-[#C83E4D] bg-[#C83E4D]/10 inline-block px-2 py-1 rounded w-fit mt-1">
+                    ⚠️ Oversold by {oversoldAmount.toLocaleString()} tickets!
+                  </p>
+                ) : (
+                  capacity > 0 && metric.totalTicketsSold > 0 && (
+                    <p className="text-xs font-semibold text-[#597864] bg-[#597864]/10 inline-block px-2 py-1 rounded w-fit mt-1">
+                      ✅ Safe (No Oversell)
+                    </p>
+                  )
+                )}
+              </div>
               {/* Mini progress bar */}
               <div className="w-full h-1.5 bg-[#EAE6E1] dark:bg-[#36322F] rounded-full overflow-hidden flex mt-3">
                 <div
@@ -198,6 +279,43 @@ export default function MetricsDashboard({
           );
         })}
       </div>
+
+      {/* Live Terminal Log */}
+      {isSimulating && (
+        <div className="bg-[#1A1817] rounded-xl border border-[#36322F] shadow-inner overflow-hidden flex flex-col h-48">
+          <div className="bg-[#242220] px-4 py-2 border-b border-[#36322F] flex items-center justify-between">
+            <p className="text-xs font-mono text-[#9C958E] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              Live Transaction Logs
+            </p>
+            <p className="text-xs font-mono text-[#9C958E]">
+              {logs.length} events
+            </p>
+          </div>
+          <div className="p-4 overflow-y-auto font-mono text-[11px] leading-relaxed flex-1 space-y-1">
+            {logs.map((log) => {
+              let colorClass = "text-[#FDFBF7]";
+              if (log.type === "error") colorClass = "text-[#C83E4D]";
+              if (log.type === "warning") colorClass = "text-[#D4A574]";
+              if (log.type === "success") colorClass = "text-[#597864]";
+
+              return (
+                <div key={log.id} className="flex items-start gap-3">
+                  <span className="text-[#7A726D] shrink-0">[{log.time}]</span>
+                  <span className="text-[#9C958E] shrink-0 w-[120px]">[{log.strategy}]</span>
+                  <span className={`${colorClass} break-all`}>
+                    {log.type === "error" && "🔴 "}
+                    {log.type === "warning" && "🟡 "}
+                    {log.type === "success" && "🟢 "}
+                    {log.message}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={logsEndRef} />
+          </div>
+        </div>
+      )}
 
       {/* Charts Grid */}
       {hasData ? (

@@ -13,6 +13,8 @@ export interface OrderData {
     status: string;
 }
 
+export type OrderStatus = "pending" | "success" | "failed";
+
 // Interface untuk data balasan saat simulasi load test selesai
 export interface SimulationData {
     total_processed: number;

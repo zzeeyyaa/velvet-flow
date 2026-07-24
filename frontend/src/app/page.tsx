@@ -10,7 +10,7 @@ import Button from "@/components/Button";
 import Input from "@/components/Input";
 import EventCard from "@/components/EventCard";
 import Modal from "@/components/Modal";
-import Accordion from "@/components/Accordion";
+
 import MetricsDashboard from "@/components/MetricsDashboard";
 
 export default function Home() {
@@ -41,7 +41,7 @@ export default function Home() {
         console.error("Failed to fetch metrics:", error);
       }
     };
-    
+
     fetchMetrics();
     const interval = setInterval(fetchMetrics, 1500); // Poll every 1.5s
     return () => clearInterval(interval);
@@ -55,7 +55,7 @@ export default function Home() {
 
   const handleRunSimulation = async (strategy: Strategy, requestsCount: number) => {
     setSimulationModalOpen(false);
-    
+
     const targetTicketId = liveMetric?.tickets?.[0]?.ticketId;
     if (!targetTicketId) {
       toast.error("Tidak ada tiket yang aktif untuk disimulasikan!");
@@ -108,7 +108,7 @@ export default function Home() {
 
       {/* Main Content Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 flex flex-col gap-6">
-        
+
         {/* Ultra-Compact Banner */}
         <div className="bg-[#FFFFFF] dark:bg-[#242220]/60 border border-[#EAE6E1] dark:border-[#36322F]/80 rounded-full py-2 px-4 flex items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
@@ -123,7 +123,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-          
+
           <a
             href="https://github.com/zzeeyyaa/velvet-flow"
             target="_blank"
@@ -140,21 +140,16 @@ export default function Home() {
           {/* Decorative background glow elements */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-[#C83E4D]/20 blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-[#597864]/20 blur-3xl pointer-events-none"></div>
-          
+
           <div className="relative z-10 flex items-start gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl text-[#FDFBF7] shadow-inner border border-white/10 flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
             <div>
-              <h3 className="font-bold text-xl text-[#FDFBF7]">Load Simulation</h3>
-              <p className="text-sm text-[#9C958E] mt-1 max-w-md">
+              <h3 className="font-bold text-l text-[#FDFBF7]">Load Simulation</h3>
+              <p className="text-xs text-[#9C958E] mt-1 max-w-md">
                 Uji ketahanan sistem terhadap lonjakan ribuan request secara bersamaan untuk mendeteksi bottleneck.
               </p>
             </div>
           </div>
-          
+
           <div className="relative z-10 w-full sm:w-auto shrink-0">
             <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-[0_0_20px_rgba(200,62,77,0.3)] hover:shadow-[0_0_30px_rgba(200,62,77,0.5)] group border border-white/10" onClick={() => setSimulationModalOpen(true)}>
               <span className="relative z-10 flex items-center gap-2 font-bold tracking-wide">
@@ -169,6 +164,7 @@ export default function Home() {
         {liveMetric && (
           <MetricsDashboard
             perStrategy={liveMetric.perStrategy}
+            tickets={liveMetric.tickets}
             totalOrders={liveMetric.totalOrders}
             isSimulating={isSimulating}
           />
@@ -187,7 +183,7 @@ export default function Home() {
               </Button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <EventCard
               id="evt-1"
@@ -237,10 +233,10 @@ export default function Home() {
             Simulasi pembelian tiket untuk event <strong className="text-[#C83E4D] dark:text-[#D44D5C]">{selectedEventId}</strong>.
           </p>
           <div className="space-y-1">
-            <Input 
-              label="Jumlah Tiket" 
-              type="number" 
-              value={purchaseQuantity} 
+            <Input
+              label="Jumlah Tiket"
+              type="number"
+              value={purchaseQuantity}
               onChange={(e) => setPurchaseQuantity(Number(e.target.value))}
               min={1}
               max={4}
@@ -274,46 +270,31 @@ export default function Home() {
           <p className="text-sm text-[#7A726D] dark:text-[#9C958E] mb-2">
             Pilih jenis beban trafik (load) yang ingin di-test ke sistem backend.
           </p>
-          <Accordion
-            items={[
-              {
-                id: "vulnerable",
-                title: "1. Normal Day (Vulnerable)",
-                content: (
-                  <div className="flex flex-col gap-3">
-                    <p>Standard requests using traditional DB constraints. Does not use Redis lock. Can result in overselling during high concurrency.</p>
-                    <Button variant="outline" size="sm" onClick={() => handleRunSimulation("vulnerable", 50)} className="w-full">
-                      Mulai Simulasi Vulnerable (50 req)
-                    </Button>
-                  </div>
-                ),
-              },
-              {
-                id: "semi_resilient",
-                title: "2. Flash Sale (Semi-Resilient)",
-                content: (
-                  <div className="flex flex-col gap-3">
-                    <p>Uses Redis SETNX for lock, but lacks idempotency. Prone to issues if failures occur mid-transaction.</p>
-                    <Button variant="primary" size="sm" onClick={() => handleRunSimulation("semi_resilient", 200)} className="w-full">
-                      Mulai Simulasi Semi-Resilient (200 req)
-                    </Button>
-                  </div>
-                ),
-              },
-              {
-                id: "resilient",
-                title: "3. Chaos Mode (Resilient)",
-                content: (
-                  <div className="flex flex-col gap-3">
-                    <p>Uses Redis SETNX lock with idempotency. Guarantees safe transactions and prevents overselling even with high failure rates.</p>
-                    <Button variant="secondary" size="sm" onClick={() => handleRunSimulation("resilient", 300)} className="w-full">
-                      Mulai Simulasi Resilient (300 req)
-                    </Button>
-                  </div>
-                ),
-              },
-            ]}
-          />
+          <div className="flex flex-col gap-4">
+            <div className="p-4 rounded-xl bg-[#FDFBF7] dark:bg-[#2C2825] border border-[#EAE6E1] dark:border-[#36322F]">
+              <h4 className="font-bold text-[#2C2825] dark:text-[#FDFBF7] mb-2">1. Normal Day (Vulnerable)</h4>
+              <p className="text-sm text-[#7A726D] dark:text-[#9C958E] mb-3">Standard requests using traditional DB constraints. Does not use Redis lock. Can result in overselling during high concurrency.</p>
+              <Button variant="outline" size="sm" onClick={() => handleRunSimulation("vulnerable", 50)} className="w-full">
+                Mulai Simulasi Vulnerable (50 req)
+              </Button>
+            </div>
+            
+            <div className="p-4 rounded-xl bg-[#FDFBF7] dark:bg-[#2C2825] border border-[#EAE6E1] dark:border-[#36322F]">
+              <h4 className="font-bold text-[#2C2825] dark:text-[#FDFBF7] mb-2">2. Flash Sale (Semi-Resilient)</h4>
+              <p className="text-sm text-[#7A726D] dark:text-[#9C958E] mb-3">Uses Redis SETNX for lock, but lacks idempotency. Prone to issues if failures occur mid-transaction.</p>
+              <Button variant="primary" size="sm" onClick={() => handleRunSimulation("semi_resilient", 200)} className="w-full">
+                Mulai Simulasi Semi-Resilient (200 req)
+              </Button>
+            </div>
+            
+            <div className="p-4 rounded-xl bg-[#FDFBF7] dark:bg-[#2C2825] border border-[#EAE6E1] dark:border-[#36322F]">
+              <h4 className="font-bold text-[#2C2825] dark:text-[#FDFBF7] mb-2">3. Chaos Mode (Resilient)</h4>
+              <p className="text-sm text-[#7A726D] dark:text-[#9C958E] mb-3">Uses Redis SETNX lock with idempotency. Guarantees safe transactions and prevents overselling even with high failure rates.</p>
+              <Button variant="secondary" size="sm" onClick={() => handleRunSimulation("resilient", 300)} className="w-full">
+                Mulai Simulasi Resilient (300 req)
+              </Button>
+            </div>
+          </div>
         </div>
       </Modal>
       {/* Create Event Modal */}
@@ -323,43 +304,43 @@ export default function Home() {
         title="Buat Event Baru"
       >
         <div className="space-y-4">
-          <Input 
-            label="Judul Event" 
+          <Input
+            label="Judul Event"
             placeholder="Misal: Konser Musik 2026"
             value={newEvent.title}
             onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
           />
-          <Input 
-            label="Deskripsi" 
+          <Input
+            label="Deskripsi"
             placeholder="Deskripsi singkat event..."
             value={newEvent.description}
             onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
           />
-          <Input 
-            label="Tanggal" 
+          <Input
+            label="Tanggal"
             type="text"
             placeholder="Misal: Dec 15, 2026 - 19:00"
             value={newEvent.date}
             onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
           />
-          <Input 
-            label="Lokasi" 
+          <Input
+            label="Lokasi"
             placeholder="Misal: Gelora Bung Karno"
             value={newEvent.location}
             onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
           />
           <div className="flex gap-4">
             <div className="flex-1">
-              <Input 
-                label="Harga ($)" 
+              <Input
+                label="Harga ($)"
                 type="number"
                 value={newEvent.price}
                 onChange={(e) => setNewEvent({ ...newEvent, price: Number(e.target.value) })}
               />
             </div>
             <div className="flex-1">
-              <Input 
-                label="Kapasitas Tiket" 
+              <Input
+                label="Kapasitas Tiket"
                 type="number"
                 value={newEvent.available_tickets}
                 onChange={(e) => setNewEvent({ ...newEvent, available_tickets: Number(e.target.value) })}
