@@ -22,3 +22,9 @@ export const softDeleteCategoryById = async (id: string) => {
     const [deletedCategory] = await sql`UPDATE categories SET status = 'DELETED' WHERE id = ${id} RETURNING *`;
     return deletedCategory;
 }
+
+export const updateCategoryById = async (id: string, name?: string | null, description?: string | null) => {
+    const [updatedCategory] = await sql`UPDATE categories
+    SET name = COALESCE(${name ?? null}, name), description = COALESCE(${description ?? null}, description) WHERE id=${id} RETURNING *`;
+    return updatedCategory;
+}
