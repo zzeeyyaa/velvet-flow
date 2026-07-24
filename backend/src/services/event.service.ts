@@ -60,9 +60,10 @@ export const updateEvent = async (
     name: string,
     description: string,
     sale_starts_at: Date,
-    status: string
+    status: string,
+    category_id: string,
 ) => {
-    const updatedEvent = await updateEventById(id, name, description, sale_starts_at, status);
+    const updatedEvent = await updateEventById(id, name, description, sale_starts_at, status, category_id);
 
     if (!updatedEvent) {
         throw new AppError(404, "Event not found.");

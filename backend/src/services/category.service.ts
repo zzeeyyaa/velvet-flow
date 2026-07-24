@@ -1,4 +1,4 @@
-import { insertCategory, findAllCategory, countCategories, softDeleteCategoryById } from "../repositories/category.repository";
+import { insertCategory, findAllCategory, countCategories, softDeleteCategoryById, updateCategoryById } from "../repositories/category.repository";
 import { AppError } from "../utils/app_errors";
 import { getOffset, buildPagination } from "../utils/pagination";
 
@@ -36,4 +36,13 @@ export const deleteCategory = async (id: string) => {
         throw new AppError(404, "Category not found.");
     }
     return deleted;
+}
+
+export const updateCategory = async (id: string, name?: string | null, description?: string | null) => {
+    const updatedCategory = await updateCategoryById(id, name, description);
+    if (!updatedCategory) {
+        throw new AppError(404, "Category not found.");
+    }
+    return updatedCategory;
+
 }

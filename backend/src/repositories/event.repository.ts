@@ -33,10 +33,11 @@ export const updateEventById = async (
     name: string,
     description: string,
     sale_starts_at: Date,
-    status: string
+    status: string,
+    category_id: string,
 ) => {
     const [updatedEvent] = await sql`UPDATE events
-    SET name = ${name}, description = ${description}, sale_starts_at = ${sale_starts_at}, status = ${status}
+    SET name = ${name}, description = ${description}, sale_starts_at = ${sale_starts_at}, status = ${status}, category_id = ${category_id}
     WHERE id = ${id}
     RETURNING *`;
     return updatedEvent;
